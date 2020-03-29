@@ -1,9 +1,7 @@
-use std::{os::raw::c_ulong, ptr::null};
-use x11::xlib::{self, Display};
+use std::ptr::null;
+use x11::xlib::{self, Display, Window};
 
 type Screen = i32;
-
-type Window = c_ulong;
 
 pub fn get_display() -> *mut Display {
     let display_name = null();
