@@ -4,10 +4,7 @@ pub mod keyboard;
 
 pub fn run() {
     let display = display::get_display();
-    println!("display: {:?}", display);
-
     let window = display::get_window(display);
-    println!("window: {:?}", window);
 
     keyboard::handle_keyboard_events(display, window);
 
