@@ -48,3 +48,7 @@ example:
 - fast mode
 - slow mode
 - scroll mode
+
+## useful resources
+- [invaluable information about xlib (in c)](https://tronche.com/gui/x/xlib/)
+- [working with uninitialized memory (c ffi)](https://doc.rust-lang.org/std/mem/union.MaybeUninit.html)
