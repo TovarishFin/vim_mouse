@@ -2,7 +2,10 @@ use std::{
     fmt::Debug,
     os::raw::{c_int, c_uint, c_ulong},
 };
-use x11::xlib::{self, Display};
+use x11::{
+    xlib::{self, Display},
+    xtest,
+};
 
 pub struct XQueryPointerResponse {
     pub root_return: c_ulong,
@@ -52,6 +55,28 @@ pub fn get_cursor_position(display: *mut Display, window: c_ulong) -> CursorCoor
 
 pub fn move_pointer(display: *mut Display, x: c_int, y: c_int) {
     unsafe {
-        xlib::XWarpPointer(display, 0, 0, 0, 0, 0, 0, x, y);
+        // xlib::XWarpPointer(display, 0, 0, 0, 0, 0, 0, x, y);
+        x11::xtest::XTestFakeRelativeMotionEvent(display, x, y, 0);
+    }
+}
+
+pub fn left_click(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 1, pressed, 0);
+    }
+}
+
+pub fn middle_click(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 2, pressed, 0);
+    }
+}
+
+pub fn right_click(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 3, pressed, 0);
     }
 }
