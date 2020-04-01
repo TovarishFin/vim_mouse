@@ -1,5 +1,5 @@
 # vim mouse (WIP)
-This is meant to be a linx (x11) compatible replacement for the karabiner ["Mouse keys Mode v4" rules for Karabiner](https://ke-complex-modifications.pqrs.org/?q=vim%20mouse)
+This is meant to be a linux (x11) compatible replacement for the karabiner ["Mouse keys Mode v4" rules for Karabiner](https://ke-complex-modifications.pqrs.org/?q=vim%20mouse)
 
 The goal of the program is the following:
 
