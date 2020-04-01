@@ -35,16 +35,17 @@ example:
 ## completed
 - hjkl mouse move
 - modifier key blocking
+- left click
+- middle click
+- right click
 
 ## wip
 - remappable keys
 
 ## todos
+- block key press events from propogating
 - diagonal movement
 - speed setting
-- left click
-- middle click
-- right click
 - fast mode
 - slow mode
 - scroll mode
