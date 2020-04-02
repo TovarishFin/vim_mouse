@@ -8,8 +8,11 @@ pub struct State {
     log: bool,
     log_mouse: bool,
 
+    rate: i32,
     activate_mapping: u32,
-    activate2_mapping: u32,
+    fast_mapping: u32,
+    slow_mapping: u32,
+    scroll_mapping: u32,
     left_mapping: u32,
     down_mapping: u32,
     up_mapping: u32,
@@ -19,8 +22,9 @@ pub struct State {
     right_click_mapping: u32,
 
     active: bool,
-    act_pressed: bool,
-    act2_pressed: bool,
+    fast_pressed: bool,
+    slow_pressed: bool,
+    scroll_pressed: bool,
     left_pressed: bool,
     down_pressed: bool,
     up_pressed: bool,
@@ -37,8 +41,11 @@ impl State {
             window,
             log: false,
             log_mouse: false,
-            activate_mapping: 65,     // space
-            activate2_mapping: 40,    // d
+            rate: 5,
+            activate_mapping: 40,     // d
+            fast_mapping: 41,         // f
+            slow_mapping: 42,         // g
+            scroll_mapping: 39,       // s
             left_mapping: 43,         // h
             down_mapping: 44,         // j
             up_mapping: 45,           // k
@@ -46,9 +53,10 @@ impl State {
             left_click_mapping: 55,   // v
             middle_click_mapping: 56, // b
             right_click_mapping: 57,  // n
-            act_pressed: false,
-            act2_pressed: false,
             active: false,
+            fast_pressed: false,
+            slow_pressed: false,
+            scroll_pressed: false,
             left_pressed: false,
             down_pressed: false,
             up_pressed: false,
@@ -59,51 +67,85 @@ impl State {
         }
     }
 
-    fn check_active(&mut self) {
-        if self.act_pressed && self.act2_pressed {
-            self.active = true;
-        } else {
-            self.active = false;
+    fn handle_active(&mut self, pressed: bool) {
+        self.active = pressed;
+    }
+
+    fn handle_fast(&mut self, pressed: bool) {
+        if self.active {
+            self.fast_pressed = pressed;
         }
     }
 
-    fn handle_act(&mut self, pressed: bool) {
-        self.act_pressed = pressed;
-
-        self.check_active();
+    fn handle_slow(&mut self, pressed: bool) {
+        if self.active {
+            self.slow_pressed = pressed;
+        }
     }
 
-    fn handle_act2(&mut self, pressed: bool) {
-        self.act2_pressed = pressed;
+    fn handle_scroll(&mut self, pressed: bool) {
+        if self.active {
+            self.scroll_pressed = pressed;
+        }
+    }
 
-        self.check_active();
+    fn get_rate(&self) -> i32 {
+        match self {
+            Self {
+                fast_pressed: true, ..
+            } => self.rate * 2,
+            Self {
+                slow_pressed: true, ..
+            } => self.rate / 2,
+            _ => self.rate,
+        }
     }
 
     fn handle_left(&mut self, pressed: bool) {
         if self.active {
             self.left_pressed = pressed;
-            cursor::move_pointer(self.display, -10, 0);
+
+            if self.scroll_pressed {
+                cursor::scroll_left(self.display, pressed);
+            } else {
+                cursor::move_pointer(self.display, -self.get_rate(), 0);
+            }
         }
     }
 
     fn handle_down(&mut self, pressed: bool) {
         if self.active {
             self.down_pressed = pressed;
-            cursor::move_pointer(self.display, 0, 10);
+
+            if self.scroll_pressed {
+                cursor::scroll_down(self.display, pressed);
+            } else {
+                cursor::move_pointer(self.display, 0, self.get_rate());
+            }
         }
     }
 
     fn handle_up(&mut self, pressed: bool) {
         if self.active {
             self.up_pressed = pressed;
-            cursor::move_pointer(self.display, 0, -10);
+
+            if self.scroll_pressed {
+                cursor::scroll_up(self.display, pressed);
+            } else {
+                cursor::move_pointer(self.display, 0, -self.get_rate());
+            }
         }
     }
 
     fn handle_right(&mut self, pressed: bool) {
         if self.active {
             self.right_pressed = pressed;
-            cursor::move_pointer(self.display, 10, 0);
+
+            if self.scroll_pressed {
+                cursor::scroll_right(self.display, pressed);
+            } else {
+                cursor::move_pointer(self.display, self.get_rate(), 0);
+            }
         }
     }
 
@@ -137,8 +179,10 @@ impl State {
         }
 
         match keycode {
-            x if x == self.activate_mapping => self.handle_act(true),
-            x if x == self.activate2_mapping => self.handle_act2(true),
+            x if x == self.activate_mapping => self.handle_active(true),
+            x if x == self.fast_mapping => self.handle_fast(true),
+            x if x == self.slow_mapping => self.handle_slow(true),
+            x if x == self.scroll_mapping => self.handle_scroll(true),
             x if x == self.left_mapping => self.handle_left(true),
             x if x == self.down_mapping => self.handle_down(true),
             x if x == self.up_mapping => self.handle_up(true),
@@ -163,8 +207,10 @@ impl State {
         let keycode = event.keycode;
 
         match keycode {
-            x if x == self.activate_mapping => self.handle_act(false),
-            x if x == self.activate2_mapping => self.handle_act2(false),
+            x if x == self.activate_mapping => self.handle_active(false),
+            x if x == self.fast_mapping => self.handle_fast(false),
+            x if x == self.slow_mapping => self.handle_slow(false),
+            x if x == self.scroll_mapping => self.handle_scroll(false),
             x if x == self.left_mapping => self.handle_left(false),
             x if x == self.down_mapping => self.handle_down(false),
             x if x == self.up_mapping => self.handle_up(false),

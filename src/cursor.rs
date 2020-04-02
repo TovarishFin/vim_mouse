@@ -55,7 +55,6 @@ pub fn get_cursor_position(display: *mut Display, window: c_ulong) -> CursorCoor
 
 pub fn move_pointer(display: *mut Display, x: c_int, y: c_int) {
     unsafe {
-        // xlib::XWarpPointer(display, 0, 0, 0, 0, 0, 0, x, y);
         x11::xtest::XTestFakeRelativeMotionEvent(display, x, y, 0);
     }
 }
@@ -78,5 +77,33 @@ pub fn right_click(display: *mut Display, pressed: bool) {
     let pressed = pressed as i32;
     unsafe {
         xtest::XTestFakeButtonEvent(display, 3, pressed, 0);
+    }
+}
+
+pub fn scroll_up(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 4, pressed, 0);
+    }
+}
+
+pub fn scroll_down(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 5, pressed, 0);
+    }
+}
+
+pub fn scroll_left(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 6, pressed, 0);
+    }
+}
+
+pub fn scroll_right(display: *mut Display, pressed: bool) {
+    let pressed = pressed as i32;
+    unsafe {
+        xtest::XTestFakeButtonEvent(display, 7, pressed, 0);
     }
 }

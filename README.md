@@ -38,6 +38,10 @@ example:
 - left click
 - middle click
 - right click
+- speed setting
+- fast mode
+- slow mode
+- scroll mode
 
 ## wip
 - remappable keys
@@ -45,10 +49,6 @@ example:
 ## todos
 - block key press events from propogating
 - diagonal movement
-- speed setting
-- fast mode
-- slow mode
-- scroll mode
 
 ## useful resources
 - [invaluable information about xlib (in c)](https://tronche.com/gui/x/xlib/)
