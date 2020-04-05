@@ -3,12 +3,28 @@ use crate::keyboard;
 use std::time::{Duration, Instant};
 use x11::xlib::{Display, Window};
 
+enum Direction {
+    Left,
+    Down,
+    Up,
+    Right,
+}
+
+enum MouseButton {
+    Left,
+    Middle,
+    Right,
+}
+
+enum SpeedMod {
+    Slow,
+    Fast,
+}
+
 #[derive(Debug)]
 pub struct State {
     display: *mut Display,
     window: Window,
-    log: bool,
-    log_mouse: bool,
 
     rate: i32,
     activate_mapping: u32,
@@ -47,8 +63,6 @@ impl State {
         let new_self = Self {
             display,
             window,
-            log: false,
-            log_mouse: false,
             rate: 5,
             activate_mapping: 40,     // d
             fast_mapping: 41,         // f
@@ -93,22 +107,27 @@ impl State {
         self.activate_mapping
     }
 
-    fn handle_fast(&mut self, pressed: bool) {
-        if self.active {
-            self.fast_pressed = pressed;
+    fn handle_speed(&mut self, speed: SpeedMod, pressed: bool) {
+        if !self.active {
+            return;
         }
-    }
 
-    fn handle_slow(&mut self, pressed: bool) {
-        if self.active {
-            self.slow_pressed = pressed;
+        match speed {
+            SpeedMod::Slow => {
+                self.fast_pressed = pressed;
+            }
+            SpeedMod::Fast => {
+                self.slow_pressed = pressed;
+            }
         }
     }
 
     fn handle_scroll(&mut self, pressed: bool) {
-        if self.active {
-            self.scroll_pressed = pressed;
+        if !self.active {
+            return;
         }
+
+        self.scroll_pressed = pressed;
     }
 
     fn get_rate(&self) -> i32 {
@@ -123,80 +142,80 @@ impl State {
         }
     }
 
-    fn handle_left(&mut self, pressed: bool) {
-        if self.active {
-            self.left_pressed = pressed;
+    fn handle_direction(&mut self, direction: Direction, pressed: bool) {
+        if !self.active {
+            return;
+        }
 
-            if self.scroll_pressed {
-                cursor::scroll_left(self.display, pressed);
-            } else {
-                cursor::move_pointer(self.display, -self.get_rate(), 0);
+        match direction {
+            Direction::Left => {
+                self.left_pressed = pressed;
+
+                if self.scroll_pressed {
+                    cursor::scroll_left(self.display, pressed);
+                } else {
+                    cursor::move_pointer(self.display, -self.get_rate(), 0);
+                }
+            }
+            Direction::Down => {
+                self.down_pressed = pressed;
+
+                if self.scroll_pressed {
+                    cursor::scroll_down(self.display, pressed);
+                } else {
+                    cursor::move_pointer(self.display, 0, self.get_rate());
+                }
+            }
+            Direction::Up => {
+                self.up_pressed = pressed;
+
+                if self.scroll_pressed {
+                    cursor::scroll_up(self.display, pressed);
+                } else {
+                    cursor::move_pointer(self.display, 0, -self.get_rate());
+                }
+            }
+            Direction::Right => {
+                self.right_pressed = pressed;
+
+                if self.scroll_pressed {
+                    cursor::scroll_right(self.display, pressed);
+                } else {
+                    cursor::move_pointer(self.display, self.get_rate(), 0);
+                }
             }
         }
     }
 
-    fn handle_down(&mut self, pressed: bool) {
-        if self.active {
-            self.down_pressed = pressed;
+    fn handle_click(&mut self, button: MouseButton, pressed: bool) {
+        if !self.active {
+            return;
+        }
 
-            if self.scroll_pressed {
-                cursor::scroll_down(self.display, pressed);
-            } else {
-                cursor::move_pointer(self.display, 0, self.get_rate());
+        match button {
+            MouseButton::Left => {
+                self.left_click_pressed = pressed;
+                cursor::left_click(self.display, pressed);
             }
-        }
-    }
-
-    fn handle_up(&mut self, pressed: bool) {
-        if self.active {
-            self.up_pressed = pressed;
-
-            if self.scroll_pressed {
-                cursor::scroll_up(self.display, pressed);
-            } else {
-                cursor::move_pointer(self.display, 0, -self.get_rate());
+            MouseButton::Middle => {
+                self.middle_click_pressed = pressed;
+                cursor::middle_click(self.display, pressed);
             }
-        }
-    }
-
-    fn handle_right(&mut self, pressed: bool) {
-        if self.active {
-            self.right_pressed = pressed;
-
-            if self.scroll_pressed {
-                cursor::scroll_right(self.display, pressed);
-            } else {
-                cursor::move_pointer(self.display, self.get_rate(), 0);
+            MouseButton::Right => {
+                self.right_click_pressed = pressed;
+                cursor::right_click(self.display, pressed);
             }
-        }
-    }
-
-    fn handle_left_click(&mut self, pressed: bool) {
-        if self.active {
-            self.left_click_pressed = pressed;
-            cursor::left_click(self.display, pressed);
-        }
-    }
-
-    fn handle_middle_click(&mut self, pressed: bool) {
-        if self.active {
-            self.middle_click_pressed = pressed;
-            cursor::middle_click(self.display, pressed);
-        }
-    }
-
-    fn handle_right_click(&mut self, pressed: bool) {
-        if self.active {
-            self.right_click_pressed = pressed;
-            cursor::right_click(self.display, pressed);
         }
     }
 
     fn handle_other(&mut self, keycode: u32, pressed: bool) {
-        if self.active {
-            keyboard::simulate_key(self.display, keycode, pressed);
+        if !self.active {
+            return;
         }
+
+        keyboard::simulate_key(self.display, keycode, pressed);
     }
+
     fn sleep_activate(&mut self) {
         self.sleep_activate_start = Instant::now();
     }
@@ -230,7 +249,6 @@ impl State {
             keyboard::ungrab_keyboard(self.display);
             let activate_was_held = self.check_activate_threshold();
             if !activate_was_held {
-                println!("key not held");
                 keyboard::ungrab_key(self.display, self.window, self.activate_mapping as i32);
 
                 self.sleep_activate();
@@ -249,7 +267,6 @@ impl State {
                         keyboard::simulate_key(self.display, keycode, false);
                     }
                 } else {
-                    println!("no cache");
                     keyboard::simulate_key(self.display, self.activate_mapping, true);
                     keyboard::simulate_key(self.display, self.activate_mapping, false);
                 }
@@ -280,16 +297,16 @@ impl State {
 
         match keycode {
             x if x == self.activate_mapping => self.handle_active(true),
-            x if x == self.fast_mapping => self.handle_fast(true),
-            x if x == self.slow_mapping => self.handle_slow(true),
             x if x == self.scroll_mapping => self.handle_scroll(true),
-            x if x == self.left_mapping => self.handle_left(true),
-            x if x == self.down_mapping => self.handle_down(true),
-            x if x == self.up_mapping => self.handle_up(true),
-            x if x == self.right_mapping => self.handle_right(true),
-            x if x == self.left_click_mapping => self.handle_left_click(true),
-            x if x == self.middle_click_mapping => self.handle_middle_click(true),
-            x if x == self.right_click_mapping => self.handle_right_click(true),
+            x if x == self.fast_mapping => self.handle_speed(SpeedMod::Fast, true),
+            x if x == self.slow_mapping => self.handle_speed(SpeedMod::Slow, true),
+            x if x == self.left_mapping => self.handle_direction(Direction::Left, true),
+            x if x == self.down_mapping => self.handle_direction(Direction::Down, true),
+            x if x == self.up_mapping => self.handle_direction(Direction::Up, true),
+            x if x == self.right_mapping => self.handle_direction(Direction::Right, true),
+            x if x == self.left_click_mapping => self.handle_click(MouseButton::Left, true),
+            x if x == self.middle_click_mapping => self.handle_click(MouseButton::Middle, true),
+            x if x == self.right_click_mapping => self.handle_click(MouseButton::Right, true),
             x => self.handle_other(x, true),
         }
     }
@@ -301,16 +318,16 @@ impl State {
 
         match keycode {
             x if x == self.activate_mapping => self.handle_active(false),
-            x if x == self.fast_mapping => self.handle_fast(false),
-            x if x == self.slow_mapping => self.handle_slow(false),
             x if x == self.scroll_mapping => self.handle_scroll(false),
-            x if x == self.left_mapping => self.handle_left(false),
-            x if x == self.down_mapping => self.handle_down(false),
-            x if x == self.up_mapping => self.handle_up(false),
-            x if x == self.right_mapping => self.handle_right(false),
-            x if x == self.left_click_mapping => self.handle_left_click(false),
-            x if x == self.middle_click_mapping => self.handle_middle_click(false),
-            x if x == self.right_click_mapping => self.handle_right_click(false),
+            x if x == self.fast_mapping => self.handle_speed(SpeedMod::Fast, false),
+            x if x == self.slow_mapping => self.handle_speed(SpeedMod::Slow, false),
+            x if x == self.left_mapping => self.handle_direction(Direction::Left, false),
+            x if x == self.down_mapping => self.handle_direction(Direction::Down, false),
+            x if x == self.up_mapping => self.handle_direction(Direction::Up, false),
+            x if x == self.right_mapping => self.handle_direction(Direction::Right, false),
+            x if x == self.left_click_mapping => self.handle_click(MouseButton::Left, false),
+            x if x == self.middle_click_mapping => self.handle_click(MouseButton::Middle, false),
+            x if x == self.right_click_mapping => self.handle_click(MouseButton::Right, false),
             x => self.handle_other(x, false),
         }
     }
