@@ -26,6 +26,7 @@ example:
 - k: mouse up
 - l: mouse right
 - v: left click
+- space: left click toggle
 - b: middle click
 - n: right click
 - f: fast mode (fast mouse move by f+hjkl)
@@ -42,13 +43,15 @@ example:
 - fast mode
 - slow mode
 - scroll mode
+- block key press events from propogating
+- diagonal movement
 
 ## wip
 - remappable keys
+- cli options
 
 ## todos
-- block key press events from propogating
-- diagonal movement
+- prevent crash on window close
 
 ## useful resources
 - [invaluable information about xlib (in c)](https://tronche.com/gui/x/xlib/)
