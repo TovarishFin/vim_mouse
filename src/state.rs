@@ -36,6 +36,7 @@ pub struct State {
     up_mapping: u32,
     right_mapping: u32,
     left_click_mapping: u32,
+    left_click_toggle_mapping: u32,
     middle_click_mapping: u32,
     right_click_mapping: u32,
     cached_keys: [Option<u32>; 2],
@@ -45,6 +46,7 @@ pub struct State {
     sleep_duration: Duration,
     active_key_threshold: Duration,
     active_last_pressed: Instant,
+    left_click_toggle: bool,
     active: bool,
     fast_pressed: bool,
     slow_pressed: bool,
@@ -64,23 +66,25 @@ impl State {
             display,
             window,
             rate: 5,
-            activate_mapping: 40,     // d
-            fast_mapping: 41,         // f
-            slow_mapping: 42,         // g
-            scroll_mapping: 39,       // s
-            left_mapping: 43,         // h
-            down_mapping: 44,         // j
-            up_mapping: 45,           // k
-            right_mapping: 46,        // l
-            left_click_mapping: 55,   // v
-            middle_click_mapping: 56, // b
-            right_click_mapping: 57,  // n
+            activate_mapping: 40,          // d
+            fast_mapping: 41,              // f
+            slow_mapping: 42,              // g
+            scroll_mapping: 39,            // s
+            left_mapping: 43,              // h
+            down_mapping: 44,              // j
+            up_mapping: 45,                // k
+            right_mapping: 46,             // l
+            left_click_mapping: 55,        // v
+            left_click_toggle_mapping: 65, // space
+            middle_click_mapping: 56,      // b
+            right_click_mapping: 57,       // n
             cached_keys: [None, None],
             sleep_activate_start: Instant::now(),
             sleep_cache_start: Instant::now(),
             sleep_duration: Duration::from_millis(5),
             active_key_threshold: Duration::from_millis(500),
             active_last_pressed: Instant::now(),
+            left_click_toggle: false,
             active: false,
             fast_pressed: false,
             slow_pressed: false,
@@ -113,10 +117,10 @@ impl State {
         }
 
         match speed {
-            SpeedMod::Slow => {
+            SpeedMod::Fast => {
                 self.fast_pressed = pressed;
             }
-            SpeedMod::Fast => {
+            SpeedMod::Slow => {
                 self.slow_pressed = pressed;
             }
         }
@@ -150,40 +154,106 @@ impl State {
         match direction {
             Direction::Left => {
                 self.left_pressed = pressed;
-
-                if self.scroll_pressed {
-                    cursor::scroll_left(self.display, pressed);
-                } else {
-                    cursor::move_pointer(self.display, -self.get_rate(), 0);
-                }
             }
             Direction::Down => {
                 self.down_pressed = pressed;
-
-                if self.scroll_pressed {
-                    cursor::scroll_down(self.display, pressed);
-                } else {
-                    cursor::move_pointer(self.display, 0, self.get_rate());
-                }
             }
             Direction::Up => {
                 self.up_pressed = pressed;
-
-                if self.scroll_pressed {
-                    cursor::scroll_up(self.display, pressed);
-                } else {
-                    cursor::move_pointer(self.display, 0, -self.get_rate());
-                }
             }
             Direction::Right => {
                 self.right_pressed = pressed;
-
-                if self.scroll_pressed {
-                    cursor::scroll_right(self.display, pressed);
-                } else {
-                    cursor::move_pointer(self.display, self.get_rate(), 0);
-                }
             }
+        }
+
+        match self {
+            /*
+             * diagonal directions
+             */
+            Self {
+                left_pressed: true,
+                down_pressed: true,
+                ..
+            } => {
+                cursor::move_pointer(self.display, -self.get_rate(), self.get_rate());
+            }
+            Self {
+                left_pressed: true,
+                up_pressed: true,
+                ..
+            } => {
+                cursor::move_pointer(self.display, -self.get_rate(), -self.get_rate());
+            }
+            Self {
+                right_pressed: true,
+                down_pressed: true,
+                ..
+            } => {
+                cursor::move_pointer(self.display, self.get_rate(), self.get_rate());
+            }
+            Self {
+                right_pressed: true,
+                up_pressed: true,
+                ..
+            } => {
+                cursor::move_pointer(self.display, self.get_rate(), -self.get_rate());
+            }
+            /*
+             * scroll directions
+             */
+            Self {
+                scroll_pressed: true,
+                left_pressed: true,
+                ..
+            } => {
+                cursor::scroll_left(self.display, pressed);
+            }
+            Self {
+                scroll_pressed: true,
+                down_pressed: true,
+                ..
+            } => {
+                cursor::scroll_down(self.display, pressed);
+            }
+            Self {
+                scroll_pressed: true,
+                up_pressed: true,
+                ..
+            } => {
+                cursor::scroll_up(self.display, pressed);
+            }
+            Self {
+                scroll_pressed: true,
+                right_pressed: true,
+                ..
+            } => {
+                cursor::scroll_right(self.display, pressed);
+            }
+            /*
+             * pointer directions
+             */
+            Self {
+                left_pressed: true, ..
+            } => {
+                cursor::move_pointer(self.display, -self.get_rate(), 0);
+            }
+            Self {
+                down_pressed: true, ..
+            } => {
+                cursor::move_pointer(self.display, 0, self.get_rate());
+            }
+            Self {
+                up_pressed: true, ..
+            } => {
+                cursor::move_pointer(self.display, 0, -self.get_rate());
+            }
+            Self {
+                right_pressed: true,
+                ..
+            } => {
+                cursor::move_pointer(self.display, self.get_rate(), 0);
+            }
+            Self { .. } => (),
         }
     }
 
@@ -206,6 +276,12 @@ impl State {
                 cursor::right_click(self.display, pressed);
             }
         }
+    }
+
+    fn handle_left_click_toggle(&mut self) {
+        self.left_click_toggle = !self.left_click_toggle;
+
+        cursor::left_click(self.display, self.left_click_toggle);
     }
 
     fn handle_other(&mut self, keycode: u32, pressed: bool) {
@@ -307,6 +383,7 @@ impl State {
             x if x == self.left_click_mapping => self.handle_click(MouseButton::Left, true),
             x if x == self.middle_click_mapping => self.handle_click(MouseButton::Middle, true),
             x if x == self.right_click_mapping => self.handle_click(MouseButton::Right, true),
+            x if x == self.left_click_toggle_mapping => self.handle_left_click_toggle(),
             x => self.handle_other(x, true),
         }
     }

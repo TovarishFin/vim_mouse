@@ -40,7 +40,7 @@ pub fn simulate_key(display: *mut Display, keycode: u32, pressed: bool) {
     }
 }
 
-pub fn handle_keyboard_events(display: *mut Display, root_window: Window, log_mouse: bool) {
+pub fn handle_keyboard_events(display: *mut Display, root_window: Window) {
     unsafe {
         let mut state = State::new(display, root_window);
 
@@ -70,7 +70,6 @@ pub fn handle_keyboard_events(display: *mut Display, root_window: Window, log_mo
                 KeyRelease => {
                     state.handle_key_release(event.key.keycode);
                 }
-                MotionNotify if log_mouse => println!("mouse moved"),
                 _ => (),
             }
         }

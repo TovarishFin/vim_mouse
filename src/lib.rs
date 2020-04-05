@@ -7,7 +7,7 @@ pub fn run() {
     let display = display::get_display();
     let window = display::get_window(display);
 
-    keyboard::handle_keyboard_events(display, window, false);
+    keyboard::handle_keyboard_events(display, window);
 
     display::close_display(display);
 }
