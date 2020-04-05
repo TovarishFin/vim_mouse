@@ -24,7 +24,8 @@ pub struct State {
     right_click_mapping: u32,
     cached_keys: [Option<u32>; 2],
 
-    sleep_start: Instant,
+    sleep_activate_start: Instant,
+    sleep_cache_start: Instant,
     sleep_duration: Duration,
     active_key_threshold: Duration,
     active_last_pressed: Instant,
@@ -61,8 +62,9 @@ impl State {
             middle_click_mapping: 56, // b
             right_click_mapping: 57,  // n
             cached_keys: [None, None],
-            sleep_start: Instant::now(),
-            sleep_duration: Duration::from_millis(10),
+            sleep_activate_start: Instant::now(),
+            sleep_cache_start: Instant::now(),
+            sleep_duration: Duration::from_millis(5),
             active_key_threshold: Duration::from_millis(500),
             active_last_pressed: Instant::now(),
             active: false,
@@ -196,15 +198,11 @@ impl State {
         }
     }
     fn sleep_activate(&mut self) {
-        self.sleep_start = Instant::now();
+        self.sleep_activate_start = Instant::now();
     }
 
     fn check_activate_sleep(&self) -> bool {
-        if self.sleep_start.elapsed() > self.sleep_duration {
-            return false;
-        }
-
-        return true;
+        self.sleep_activate_start.elapsed() < self.sleep_duration
     }
 
     fn start_activate_threshold(&mut self) {
@@ -213,6 +211,14 @@ impl State {
 
     fn check_activate_threshold(&self) -> bool {
         self.active_last_pressed.elapsed() > self.active_key_threshold
+    }
+
+    fn sleep_cache(&mut self) {
+        self.sleep_cache_start = Instant::now();
+    }
+
+    fn check_cache_sleep(&self) -> bool {
+        self.sleep_cache_start.elapsed() < self.sleep_duration
     }
 
     fn handle_active(&mut self, pressed: bool) {
@@ -224,12 +230,15 @@ impl State {
             keyboard::ungrab_keyboard(self.display);
             let activate_was_held = self.check_activate_threshold();
             if !activate_was_held {
+                println!("key not held");
                 keyboard::ungrab_key(self.display, self.window, self.activate_mapping as i32);
-                self.sleep_activate();
-                keyboard::simulate_key(self.display, self.activate_mapping, true);
-                keyboard::simulate_key(self.display, self.activate_mapping, false);
 
+                self.sleep_activate();
+                self.sleep_cache();
                 if let Some(keycode) = self.cached_keys[0].take() {
+                    keyboard::simulate_key(self.display, self.activate_mapping, true);
+                    keyboard::simulate_key(self.display, self.activate_mapping, false);
+
                     keyboard::simulate_key(self.display, keycode, false);
                     keyboard::simulate_key(self.display, keycode, true);
                     keyboard::simulate_key(self.display, keycode, false);
@@ -239,6 +248,10 @@ impl State {
                         keyboard::simulate_key(self.display, keycode, true);
                         keyboard::simulate_key(self.display, keycode, false);
                     }
+                } else {
+                    println!("no cache");
+                    keyboard::simulate_key(self.display, self.activate_mapping, true);
+                    keyboard::simulate_key(self.display, self.activate_mapping, false);
                 }
 
                 keyboard::grab_key(self.display, self.window, self.activate_mapping as i32);
@@ -257,7 +270,7 @@ impl State {
     }
 
     pub fn handle_key_press(&mut self, keycode: u32) {
-        if keycode != self.activate_mapping {
+        if keycode != self.activate_mapping || self.check_cache_sleep() {
             self.cache_key(keycode);
         }
 
