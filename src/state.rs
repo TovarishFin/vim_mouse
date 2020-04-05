@@ -321,14 +321,18 @@ impl State {
             keyboard::grab_keyboard(self.display, self.window);
 
             self.start_activate_threshold();
+            self.reset_cache();
         } else {
             keyboard::ungrab_keyboard(self.display);
+
             let activate_was_held = self.check_activate_threshold();
-            if !activate_was_held {
+            if activate_was_held {
+                self.reset_cache();
+            } else {
+                self.sleep_cache();
                 keyboard::ungrab_key(self.display, self.window, self.activate_mapping as i32);
 
                 self.sleep_activate();
-                self.sleep_cache();
                 if let Some(keycode) = self.cached_keys[0].take() {
                     keyboard::simulate_key(self.display, self.activate_mapping, true);
                     keyboard::simulate_key(self.display, self.activate_mapping, false);
@@ -362,8 +366,12 @@ impl State {
         }
     }
 
+    fn reset_cache(&mut self) {
+        self.cached_keys = [None, None];
+    }
+
     pub fn handle_key_press(&mut self, keycode: u32) {
-        if keycode != self.activate_mapping || self.check_cache_sleep() {
+        if keycode != self.activate_mapping() && !self.check_cache_sleep() {
             self.cache_key(keycode);
         }
 
