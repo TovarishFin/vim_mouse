@@ -5,7 +5,7 @@ use std::os::raw::c_int;
 use x11::{
     xlib::{
         self, Display, FocusChangeMask, FocusOut, GrabModeAsync, KeyPress, KeyPressMask,
-        KeyRelease, KeyReleaseMask, MotionNotify, PointerMotionMask, Window, XEvent,
+        KeyRelease, KeyReleaseMask, PointerMotionMask, Window, XEvent,
     },
     xtest,
 };
