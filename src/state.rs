@@ -65,7 +65,7 @@ impl State {
         let new_self = Self {
             display,
             window,
-            rate: 5,
+            rate: 10,
             activate_mapping: 40,          // d
             fast_mapping: 41,              // f
             slow_mapping: 42,              // g
